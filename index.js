@@ -2,11 +2,16 @@
 // @name         Oplius
 // @version      2024-09-07
 // @description  The fastest way to beat IOE!
-// @author       Itzporium
+// @author       kaedesuu
 // @match        https://ioe.vn/lam-bai/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=ioe.vn
 // @grant        none
 // ==/UserScript==
+
+// Since this is a tampermonkey script, please use tampermonkey
+// Or else the script won't load
+
+// Reason: It needs to check for game load listener
 
 ;(async() => {
   if (window.__oplius_injected === undefined || window.__oplius_injected === null || window.__oplius_injected === false) {
@@ -40,6 +45,17 @@
 
       // Cheat modules
       const command_modules = [
+        {
+          "name": "help",
+          "cmd": ["help","hlp", "cmd", "cmds"],
+          "description": "Show commands list",
+          "isEnabled": false,
+          "function": (args) => {
+            let final_outp = ``
+            command_modules.forEach((el) => { final_outp += `Name: ${el["name"]} | Description: ${el["description"]} | Command (Alternative): ${JSON.stringify(el["cmd"])}\n` });
+            console.log(final_outp);
+          }
+        },
         {
           "name": "freeze",
           "cmd": ["freeze", "frz", "fr"],
@@ -167,16 +183,31 @@
       }, window)
     } 
    
-    const startTimestamp = Date.now(); 
-    const gameLoaded = () => {
-      if (getComputedStyle(document.getElementsByClassName("progress-bar")[0].children[0]).width !== "100%") {
-        return setTimeout(gameLoaded, 500); // 500ms loop
-      } else {
-        setTimeout(main, 5000);
-      }
-    }
+    const startTimestamp = Date.now();
 
-    gameLoaded(); 
+    const gameScene = null;
+
+    setInterval(() => {
+      if (window && window.__require && window.__require("GameScene")) {
+        gameScene = window.__require("GameScene");
+        loadCheck();
+      }
+    }, 250)
+
+    let logTime_original = null;
+
+    const logTime_loop = setInterval(() => {
+      if (window && window.__require && window.__require("GameScene") && window.__require("GameScene").default && window.__require("GameScene").default.prototype && window.__require("GameScene").default.prototype.logTime && logTime_original === null) {
+        logTime_original = window.__require("GameScene").default.prototype.logTime;
+        window.__require("GameScene").default.prototype.logTime = (msg) => {
+          logTime_original(msg);
+          if (msg.includes("show lobby done")) {
+            main();
+          }
+        }
+        clearInterval(logTime_loop);
+      }
+    }, 250);
   } else {
     alert("Oplius already injected!");
   }
