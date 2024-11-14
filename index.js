@@ -10,17 +10,20 @@
 
 // Since this is a tampermonkey script, please use tampermonkey
 // Or else the script won't load
-
 // Reason: It needs to check for game load listener
+
+// If you still want to do direct injection (uncomment line below)
+// window.__require("HotUpdate").default.prototype.logTime("show lobby done");
 
 ;(async() => {
   if (window.__oplius_injected === undefined || window.__oplius_injected === null || window.__oplius_injected === false) {
     // Set inject value
-    // window.__oplius_injected = true;
+    window.__oplius_injected = true;
 
     const main = () => {
+      // Injection message
       console.log(`[Oplius]: Injected into game, took ${Date.now() - startTimestamp}ms for game to load.`)
-
+      
       // ApiDefine
       const api_enum = window.__require("ApiDefine").ApiDefine; // Can't believe it's ANSWEAR instead of ANSWER in their code
 
@@ -36,11 +39,8 @@
       // Functions
       const booleanify = (r_str) => {
         const str = r_str?.toString().toLowerCase().replaceAll(" ", "")
-        if (str === "true" || str === "yes" || str === "y" || str === "ye" || str === "yea" || str === "yeah") {
-          return true;
-        } else {
-          return false;
-        }
+        if (str === "") return null;
+        return (str === "true" || str === "yes" || str === "y" || str === "ye" || str === "yea" || str === "yeah") ? true : false;
       }
 
       // Cheat modules
@@ -48,7 +48,7 @@
         {
           "name": "help",
           "cmd": ["help","hlp", "cmd", "cmds"],
-          "description": "Show commands list",
+          "description": "Show commands list. Usage: help",
           "isEnabled": false,
           "function": (args) => {
             let final_outp = ``
@@ -59,7 +59,7 @@
         {
           "name": "freeze",
           "cmd": ["freeze", "frz", "fr"],
-          "description": "Freeze the current game time.",
+          "description": "Freeze the current game time. Usage: freeze [isEnable: bool (true/false)]",
           "isEnabled": false,
           "function": (args) => {
             const isEnable = booleanify(args[0]);
@@ -72,14 +72,15 @@
               window.__require("CountDown").CountDown.prototype.update = (e) => {}
             } else {
               // Apply old countdown update function
-              window.__require("CountDown").CountDown.prototype.update = old_countDownUpdate
+              if (old_countDownUpdate === undefined || old_countDownUpdate === null) old_countDownUpdate = window.__require("CountDown").CountDown.prototype.update;
+              window.__require("CountDown").CountDown.prototype.update = old_countDownUpdate;
             } 
           }
         },
         {
           "name": "antiEndgame",
           "cmd": ["antiendgame", "aeg", "antieg"],
-          "description": "Freeze the current game time.",
+          "description": "Prevent game from ending. Usage: aeg [isEnable: bool (true/false)]",
           "isEnabled": false,
           "function": (args) => {
             const isEnable = booleanify(args[0]);
@@ -98,7 +99,7 @@
         {
           "name": "incorrectwarn",
           "cmd": ["iwarn", "incorrectwarn", "wrongwarn", "answerwarn"],
-          "description": "Warn users/players when they choose incorrect option.",
+          "description": "Warn users/players when they choose incorrect option. Usage: iwarn [isEnable: bool (true/false)]",
           "isEnabled": false,
           "function": (args) => {
             const isEnable = booleanify(args[0]);
@@ -184,23 +185,13 @@
     } 
    
     const startTimestamp = Date.now();
-
-    const gameScene = null;
-
-    setInterval(() => {
-      if (window && window.__require && window.__require("GameScene")) {
-        gameScene = window.__require("GameScene");
-        loadCheck();
-      }
-    }, 250)
-
     let logTime_original = null;
 
     const logTime_loop = setInterval(() => {
-      if (window && window.__require && window.__require("GameScene") && window.__require("GameScene").default && window.__require("GameScene").default.prototype && window.__require("GameScene").default.prototype.logTime && logTime_original === null) {
-        logTime_original = window.__require("GameScene").default.prototype.logTime;
-        window.__require("GameScene").default.prototype.logTime = (msg) => {
-          logTime_original(msg);
+      if (window && window.__require && window.__require("HotUpdate") && window.__require("GameScene").default && window.__require("GameScene").default.prototype && window.__require("GameScene").default.prototype.logTime && logTime_original === null) {
+        logTime_original = window.__require("HotUpdate").default.prototype.logTime;
+        window.__require("HotUpdate").default.prototype.logTime = (msg) => {
+          logTime_original(msg); 
           if (msg.includes("show lobby done")) {
             main();
           }
