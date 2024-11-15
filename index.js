@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Oplius
-// @version      2024-09-07
+// @version      2024-11-15
 // @description  The fastest way to beat IOE!
 // @author       kaedesuu
 // @match        https://ioe.vn/lam-bai/*
@@ -38,10 +38,24 @@
 
       // Functions
       const booleanify = (r_str) => {
-        const str = r_str?.toString().toLowerCase().replaceAll(" ", "")
+        const str = r_str?.toString().toLowerCase().replaceAll(" ", "");
         if (str === "") return null;
         return (str === "true" || str === "yes" || str === "y" || str === "ye" || str === "yea" || str === "yeah") ? true : false;
       }
+
+      // Popup listener (For some oplius module injection require error)
+      const UIPopupManager = window.__require("UIPopupManager");
+      const old_showPopupFromNode = UIPopupManager.default.prototype.showPopupFromNode;
+      
+      // Make a fake "this" environment (So it won't throw error) for UIPopupManager
+      const fake_this_env = UIPopupManager.default.prototype;
+      fake_this_env._popupStack = [];
+      fake_this_env._childs_node = [];
+      fake_this_env.node = {
+        "getChildByName": (child) => { return fake_this_env._childs_node[child] || undefined; },
+        "addChild": (child) => { fake_this_env._childs_node.push(child); }
+      };
+
 
       // Cheat modules
       const command_modules = [
@@ -68,11 +82,14 @@
               // Grab original function
               old_countDownUpdate = window.__require("CountDown").CountDown.prototype.update;
 
-              // The argument "e" here is time, they are 0.000 idk
+              // The argument "e" here is time, they are 0.000 idk 
               window.__require("CountDown").CountDown.prototype.update = (e) => {}
             } else {
               // Apply old countdown update function
-              if (old_countDownUpdate === undefined || old_countDownUpdate === null) old_countDownUpdate = window.__require("CountDown").CountDown.prototype.update;
+              if (old_countDownUpdate === undefined || old_countDownUpdate === null) {
+                old_countDownUpdate = window.__require("CountDown").CountDown.prototype.update;
+                return;
+              }
               window.__require("CountDown").CountDown.prototype.update = old_countDownUpdate;
             } 
           }
@@ -92,6 +109,9 @@
               // No more end game lol
               window.__require("GamePlay").prototype.endGame = () => {};
             } else {
+              if (old_endGame === undefined || old_endGame === null) {
+                old_endGame = window.__require("GamePlay").prototype.endGame;
+              }
               window.__require("GamePlay").prototype.endGame = old_endGame;
             }
           }
@@ -107,6 +127,16 @@
             if (isEnable === true) {
               // Grab original function
               old_postApi = httpUtils.default.postApi;
+
+              // Inject (Tamper) into original function
+              UIPopupManager.default.prototype.showPopupFromNode = (e, t, o, n) => {
+                if (e !== "__OPLIUS_INCORRECT_WARN_MODULE_POPUP__") {
+                  // Continue
+                  return old_showPopupFromNode.call(fake_this_env, e, t, o, n);
+                } else {
+                  return undefined;
+                }
+              }
 
               // Inject into postApi function
               httpUtils.default.postApi = (url, request, res, bool) => { 
@@ -136,23 +166,20 @@
                 } else { return old_postApi(url, request, res, bool) };
               }
             } else if (isEnable === false) {
+              if (old_postApi === undefined || old_postApi === null) {
+                old_postApi = httpUtils.default.postApi;
+                return;
+              }
+              if (old_showPopupFromNode === undefined || old_showPopupFromNode === null) {
+                old_showPopupFromNode = UIPopupManager.default.prototype.showPopupFromNode;
+                return;
+              }
               httpUtils.default.postApi = old_postApi;
+              UIPopupManager.default.prototype.showPopupFromNode = old_showPopupFromNode;
             }
           }
         },
-      ]
-
-      // Popup listener (For some oplius module injection require error)
-      const UIPopupManager = window.__require("UIPopupManager");
-      const old_showPopup = UIPopupManager.default.prototype.showPopup;
-      UIPopupManager.default.prototype.showPopup = (e, t, o, n, i) => {
-        if (e !== "__OPLIUS_INCORRECT_WARN_MODULE_POPUP__") {
-          // Continue
-          return old_showPopup(e, t, o, n, i);
-        } else {
-          return undefined;
-        }
-      }
+      ] 
 
       // Binding on Cocos-engine (Bad engine lol)
       // VERY IMPORTANT: If you're a gamedev, don't do cocos-engine it's a bad game engine
