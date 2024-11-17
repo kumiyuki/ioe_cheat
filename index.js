@@ -19,16 +19,58 @@
   if (window.__oplius_injected === undefined || window.__oplius_injected === null || window.__oplius_injected === false) {
     // Set inject value
     window.__oplius_injected = true;
-
+    
     const main = () => {
       // Injection message
       console.log(`[Oplius]: Injected into game, took ${Date.now() - startTimestamp}ms for game to load.`)
-      
+     
+      const getAppModel = () => window?.__require("ClientData")?.default?.prototype?.constructor?.AppModel;
+      const question_types = window?.__require("ioe_config").IOE.QuestionType || {};
+
+      // Taking from the platform with white theme
+      const generateString = (length) => {
+        let result = '';
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        const charactersLength = characters.length;
+        let counter = 0;
+        while (counter < length) {
+          result += characters.charAt(Math.floor(Math.random() * charactersLength));
+          counter += 1;
+        }
+        return result;
+      }
+
+      const httpUtils_key = generateString(20);
+      const endGame_key = generateString(20);
+
       // ApiDefine
       const api_enum = window.__require("ApiDefine").ApiDefine; // Can't believe it's ANSWEAR instead of ANSWER in their code
 
       // Patch typo issue on original code
       api_enum.ANSWER = api_enum.ANSWEAR_CHECK;
+
+      // Finish game with answer
+      const finish_game_ans = async (answers) => {
+        window.__require("ClientData").default.ans = answers;
+        window.__require("GamePlay")?.GamePlay?.prototype?.resetStateAllView();
+        window.__require("GamePlay")?.GamePlay?.prototype?.endGame(endGame_key);
+      }
+
+      // Check answer correct
+      const check_correction = (answers) => {
+        // Use the httpUtils_key so the postApi if injected won't cause any issues
+        return new Promise((resolve) => {
+          httpUtils.default.postApi(api_enum.ANSWER, {
+            "api_key": window?.__require("ClientData")?.default?.prototype?.constructor?.API_KEY || "gameioe",
+            "token": window?.__require("ClientData")?.default?.prototype?.constructor?.TokenMD5orTokenFull || "",
+            "serviceCode": window?.__require("ClientData")?.default?.prototype?.constructor?.SERVICE_CODE,
+            "examKey": getAppModel()?.game?.examKey,
+            "ans": answers, // Example: [{"questId":000000,"point":10,"ans":"True"}]
+            "IPClient":"",
+            "deviceId":""
+          }, (data) => resolve((data?._data?.data?.point > 0) ? true : false), false, httpUtils_key);
+        })
+      }
 
       // Variables
       const httpUtils = window.__require("HttpUtils");
@@ -107,7 +149,7 @@
               old_endGame = window.__require("GamePlay").prototype.endGame;
 
               // No more end game lol
-              window.__require("GamePlay").prototype.endGame = () => {};
+              window.__require("GamePlay").prototype.endGame = (key) => { if (key === endGame_key) old_endGame(); };
             } else {
               if (old_endGame === undefined || old_endGame === null) {
                 old_endGame = window.__require("GamePlay").prototype.endGame;
@@ -139,12 +181,18 @@
               }
 
               // Inject into postApi function
-              httpUtils.default.postApi = (url, request, res, bool) => { 
+              // NOTE: key is the input for the oplius module
+              httpUtils.default.postApi = (url, request, res, bool, key) => { 
                 if (url.includes(api_enum.ANSWER) || url === api_enum.ANSWEAR_CHECK || url.includes(api_enum.ANSWEAR_CHECK)) { 
                   return old_postApi(url, request, (response) => {
                     if (response["_data"] && response["_data"]["data"] && response["_data"]["data"]["ans"] && !isNaN(Number(response["_data"]["data"]["point"]))) {
                       const pointGiven = Number(response["_data"]["data"]["point"]);
-      
+                      
+                      if (key === httpUtils_key) {
+                        res(response);
+                        return response;
+                      }
+
                       if (pointGiven <= 0) {
                         // Give user alert
                         alert(`The answer "${response["_data"]["data"]["ans"]}" is incorrect, please try again with different option`);
@@ -179,6 +227,164 @@
             }
           }
         },
+        {
+          "name": "bruteforce-answer",
+          "cmd": ["bruteforce-answer", "bforce", "aans", "autoans"],
+          "description": "Works on ticking answer and true/false game only.",
+          "isEnabled": false,
+          "function": async (args) => { 
+            // Except for one type of game (They don't require brute-force)
+            // The "LEO_NUI" is "hanh tinh tim"
+            if (window?.__require("ClientData")?.ClientDataKey?.GAME_NAME === "LEO_NUI") {
+              const answers_array = [];
+
+              await getAppModel()?.game?.questionArr.forEach(async (question) => {
+                const ans_obj = question?.data?.ans;
+                const q_id = question?.questionId; 
+                const q_point = question?.questionPoint;
+                let final_ans = "";
+
+                for (let i = 0; i < ans_obj.length; i++) {
+                  for (let j = 0; j < ans_obj.length; j++) {
+                    if (ans_obj[j]?.orderTrue === i) final_ans += `${ans_obj[j]?.content}${i < ans_obj.length ? "|" : ""}`;
+                  }
+                }
+
+                answers_array.push({
+                  "ans": final_ans || "",
+                  "point": q_point || 10,
+                  "questId": q_id || 0
+                });
+              })
+
+              finish_game_ans(answers_array || []);
+              return;
+            }
+
+            const results = await Promise.all(
+              getAppModel()?.game?.questionArr.map(async (question) => {
+                const q_id = question.questionId;
+                const q_type = question.questionType;
+                const q_point = question.questionPoint;
+          
+                switch (q_type) {
+                  case question_types.TrueOrFalse:
+                    const true_check = await check_correction({
+                      questId: q_id,
+                      point: q_point,
+                      ans: "True",
+                    });
+                    return { questId: q_id, point: q_point, ans: true_check ? "True" : "False" };
+          
+                  case question_types.SelectAnswear:
+                    const checkResults = await Promise.all(
+                      question.answearArr.map(async (answer) =>
+                        check_correction({ questId: q_id, point: q_point, ans: answer.content })
+                      )
+                    );
+                    const correctAnswerIndex = checkResults.findIndex((result) => result);
+                    return correctAnswerIndex !== -1
+                      ? {
+                          questId: q_id,
+                          point: q_point,
+                          ans: question.answearArr[correctAnswerIndex].content,
+                        }
+                      : null; // Handle case where no correct answer is found
+          
+                  default:
+                    console.warn(`Unknown question type: ${q_type}`);
+                    return null;
+                }
+              })
+            );
+          
+            // Filter out null values (errors or no correct answer)
+            const answers_array = results.filter((result) => result !== null);
+            finish_game_ans(answers_array || []);
+          }
+        },
+        {
+          "name": "show-bruteforce-answer",
+          "cmd": ["show-bruteforce-answer", "sbforce", "saans", "showans"],
+          "description": "Works on ticking answer and true/false game only. This will output the answer inside console.",
+          "isEnabled": false,
+          "function": async (args) => {
+            const b_output = (answers) => {
+              for (let i = 0; i < answers.length; i++) {
+                console.log(`${i+1}: "${answers[i]?.ans}" | questId: ${answers[i]?.questId}`);
+              }
+            }
+
+            // Except for one type of game (They don't require brute-force)
+            // The "LEO_NUI" is "hanh tinh tim"
+            if (window?.__require("ClientData")?.ClientDataKey?.GAME_NAME === "LEO_NUI") {
+              const answers_array = [];
+
+              await getAppModel()?.game?.questionArr.forEach(async (question) => {
+                const ans_obj = question?.data?.ans;
+                const q_id = question?.questionId; 
+                const q_point = question?.questionPoint;
+                let final_ans = "";
+
+                for (let i = 0; i < ans_obj.length; i++) {
+                  for (let j = 0; j < ans_obj.length; j++) {
+                    if (ans_obj[j]?.orderTrue === i) final_ans += `${ans_obj[j]?.content}${i < ans_obj.length ? "|" : ""}`;
+                  }
+                }
+
+                answers_array.push({
+                  "ans": final_ans || "",
+                  "point": q_point || 10,
+                  "questId": q_id || 0
+                });
+              })
+
+              b_output(answers_array);
+              return;
+            }
+
+            const results = await Promise.all(
+              getAppModel()?.game?.questionArr.map(async (question) => {
+                const q_id = question.questionId;
+                const q_type = question.questionType;
+                const q_point = question.questionPoint;
+          
+                switch (q_type) {
+                  case question_types.TrueOrFalse:
+                    const true_check = await check_correction({
+                      questId: q_id,
+                      point: q_point,
+                      ans: "True",
+                    });
+                    return { questId: q_id, point: q_point, ans: true_check ? "True" : "False" };
+          
+                  case question_types.SelectAnswear:
+                    const checkResults = await Promise.all(
+                      question.answearArr.map(async (answer) =>
+                        check_correction({ questId: q_id, point: q_point, ans: answer.content })
+                      )
+                    );
+                    const correctAnswerIndex = checkResults.findIndex((result) => result);
+                    return correctAnswerIndex !== -1
+                      ? {
+                          questId: q_id,
+                          point: q_point,
+                          ans: question.answearArr[correctAnswerIndex].content,
+                        }
+                      : null; // Handle case where no correct answer is found
+          
+                  default:
+                    console.warn(`Unknown question type: ${q_type}`);
+                    return null;
+                }
+              })
+            );
+          
+            // Filter out null values (errors or no correct answer)
+            const answers_array = results.filter((result) => result !== null);
+            b_output(answers_array);
+          }
+        }
       ] 
 
       // Binding on Cocos-engine (Bad engine lol)
@@ -192,11 +398,12 @@
       // Command interface
       window.cc.systemEvent.on(window.cc.SystemEvent.EventType.KEY_DOWN, (ev) => {
         if (ev.keyCode === 59 || ev.keyCode === 191) {
-          const command_prompt = window.prompt("Enter command here:");
+          const command_prompt = window.prompt("Enter command here:") || "";
           const command_input = command_prompt.split(" ")[0];
           const args = command_prompt.split(" ").splice(1);
 
           command_modules.forEach((command) => {
+            if (!command || !command["cmd"]) return;
             if (command["cmd"].includes(command_input)) {
               if (command["isEnabled"] === false) {
                 command["isEnabled"] = true;
