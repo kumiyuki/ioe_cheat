@@ -233,7 +233,7 @@
           "description": "Works on ticking answer and true/false game only.",
           "isEnabled": false,
           "function": async (args) => { 
-            // Except for one type of game (They don't require brute-force)
+            // Except for two types of game (They don't require brute-force)
             // The "LEO_NUI" is "hanh tinh tim"
             if (window?.__require("ClientData")?.ClientDataKey?.GAME_NAME === "LEO_NUI") {
               const answers_array = [];
@@ -254,6 +254,21 @@
                   "ans": final_ans || "",
                   "point": q_point || 10,
                   "questId": q_id || 0
+                });
+              })
+
+              finish_game_ans(answers_array || []);
+              return;
+            }
+
+            if (window?.__require("ClientData")?.ClientDataKey?.GAME_NAME === "GAME_12_GHEPCAP") {
+              const answers_array = [];
+
+              await getAppModel()?.game?.questionArr.forEach(async (question) => {
+                answers_array.push({
+                  "ans": question?.data?.ans[0]?.content || "",
+                  "point": question?.questionPoint || 10,
+                  "questId": question?.questionId || 0 
                 });
               })
 
@@ -315,7 +330,13 @@
               }
             }
 
-            // Except for one type of game (They don't require brute-force)
+            const b_q_output = (answers) => {
+              for (let i = 0; i < answers.length; i++) {
+                console.info(`${i+1}: ${answers[i]?.content} | "${answers[i]?.ans}" | questId: ${answers[i]?.questId}`);
+              }
+            }
+
+            // Except for two types of game (They don't require brute-force)
             // The "LEO_NUI" is "hanh tinh tim"
             if (window?.__require("ClientData")?.ClientDataKey?.GAME_NAME === "LEO_NUI") {
               const answers_array = [];
@@ -340,6 +361,22 @@
               })
 
               b_output(answers_array);
+              return;
+            }
+
+            if (window?.__require("ClientData")?.ClientDataKey?.GAME_NAME === "GAME_12_GHEPCAP") {
+              const answers_array = [];
+
+              await getAppModel()?.game?.questionArr.forEach(async (question) => {
+                answers_array.push({
+                  "ans": question?.data?.ans[0]?.content || "",
+                  "point": question?.questionPoint || 10,
+                  "questId": question?.questionId || 0,
+                  "content": question?.data?.content?.content || ""
+                });
+              })
+
+              b_q_output(answers_array);
               return;
             }
 
