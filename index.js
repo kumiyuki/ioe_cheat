@@ -338,7 +338,7 @@
 
             // Except for two types of game (They don't require brute-force)
             // The "LEO_NUI" is "hanh tinh tim"
-            if (window?.__require("ClientData")?.ClientDataKey?.GAME_NAME === "LEO_NUI") {
+            if (window?.__require("ClientData")?.ClientDataKey?.GAME_NAME === "LEO_NUI" && window.location.href.includes("leo")) {
               const answers_array = [];
 
               await getAppModel()?.game?.questionArr.forEach(async (question) => {
@@ -364,7 +364,7 @@
               return;
             }
 
-            if (window?.__require("ClientData")?.ClientDataKey?.GAME_NAME === "GAME_12_GHEPCAP") {
+            if (window?.__require("ClientData")?.ClientDataKey?.GAME_NAME === "GAME_12_GHEPCAP" && window.location.href.includes("ghep-cap")) {
               const answers_array = [];
 
               await getAppModel()?.game?.questionArr.forEach(async (question) => {
