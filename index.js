@@ -22,7 +22,7 @@
     
     const main = () => {
       // Injection message
-      console.log(`[Oplius]: Injected into game, took ${Date.now() - startTimestamp}ms for game to load.`)
+      console.info(`[Oplius]: Injected into game, took ${Date.now() - startTimestamp}ms for game to load.`)
      
       const getAppModel = () => window?.__require("ClientData")?.default?.prototype?.constructor?.AppModel;
       const question_types = window?.__require("ioe_config").IOE.QuestionType || {};
@@ -109,7 +109,7 @@
           "function": (args) => {
             let final_outp = ``
             command_modules.forEach((el) => { final_outp += `Name: ${el["name"]} | Description: ${el["description"]} | Command (Alternative): ${JSON.stringify(el["cmd"])}\n` });
-            console.log(final_outp);
+            console.info(final_outp);
           }
         },
         {
@@ -311,7 +311,7 @@
           "function": async (args) => {
             const b_output = (answers) => {
               for (let i = 0; i < answers.length; i++) {
-                console.log(`${i+1}: "${answers[i]?.ans}" | questId: ${answers[i]?.questId}`);
+                console.info(`${i+1}: "${answers[i]?.ans}" | questId: ${answers[i]?.questId}`);
               }
             }
 
