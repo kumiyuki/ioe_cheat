@@ -233,22 +233,17 @@
           "description": "Works on ticking answer and true/false game only.",
           "isEnabled": false,
           "function": async (args) => { 
-            // Except for two types of game (They don't require brute-force)
+            // Except for some types of game (They don't require brute-force)
             // The "LEO_NUI" is "hanh tinh tim"
-            if (window?.__require("ClientData")?.ClientDataKey?.GAME_NAME === "LEO_NUI" && window.location.href.includes("hanh-tinh-tim")) { 
+            if ((window?.__require("ClientData")?.ClientDataKey?.GAME_NAME === "LEO_NUI" && window.location.href.includes("hanh-tinh-tim")) || (window?.__require("ClientData")?.ClientDataKey?.GAME_NAME === "KHO_BAU" && window.location.href.includes("tham-hiem-dai-duong"))) { 
               const answers_array = [];
 
               await getAppModel()?.game?.questionArr.forEach(async (question) => {
                 const ans_obj = question?.data?.ans;
                 const q_id = question?.questionId; 
                 const q_point = question?.questionPoint;
-                let final_ans = "";
-
-                for (let i = 0; i < ans_obj.length; i++) {
-                  for (let j = 0; j < ans_obj.length; j++) {
-                    if (ans_obj[j]?.orderTrue === i) final_ans += `${ans_obj[j]?.content}${i < ans_obj.length ? "|" : ""}`;
-                  }
-                }
+                const sorted_ans = ans_obj.slice().sort((a, b) => a.orderTrue - b.orderTrue);
+                const final_ans = sorted_ans.map(item => item.content).join('|');
 
                 answers_array.push({
                   "ans": final_ans || "",
@@ -259,14 +254,14 @@
 
               finish_game_ans(answers_array || []);
               return;
-            }
+            } 
 
             if (window?.__require("ClientData")?.ClientDataKey?.GAME_NAME === "GAME_12_GHEPCAP" && window.location.href.includes("ghep-cap")) { 
               const answers_array = [];
 
               await getAppModel()?.game?.questionArr.forEach(async (question) => {
                 answers_array.push({
-                  "ans": question?.data?.ans[0]?.content || "",
+                  "ans": `${question?.data?.content?.content}|${question?.data?.ans[0]?.content}` || "",
                   "point": question?.questionPoint || 10,
                   "questId": question?.questionId || 0 
                 });
@@ -336,7 +331,7 @@
               }
             }
 
-            // Except for two types of game (They don't require brute-force)
+            // Except for some types of game (They don't require brute-force)
             // The "LEO_NUI" is "hanh tinh tim"
             if (window?.__require("ClientData")?.ClientDataKey?.GAME_NAME === "LEO_NUI" && window.location.href.includes("hanh-tinh-tim")) {
               const answers_array = [];
@@ -345,19 +340,36 @@
                 const ans_obj = question?.data?.ans;
                 const q_id = question?.questionId; 
                 const q_point = question?.questionPoint;
-                let final_ans = "";
-
-                for (let i = 0; i < ans_obj.length; i++) {
-                  for (let j = 0; j < ans_obj.length; j++) {
-                    if (ans_obj[j]?.orderTrue === i) final_ans += `${ans_obj[j]?.content}${i < ans_obj.length ? "|" : ""}`;
-                  }
-                }
+                const sorted_ans = ans_obj.slice().sort((a, b) => a.orderTrue - b.orderTrue);
+                const final_ans = sorted_ans.map(item => item.content).join('|');
 
                 answers_array.push({
                   "ans": final_ans || "",
                   "point": q_point || 10,
                   "questId": q_id || 0
                 });
+              })
+
+              b_output(answers_array);
+              return;
+            }
+
+            if (window?.__require("ClientData")?.ClientDataKey?.GAME_NAME === "KHO_BAU" && window.location.href.includes("tham-hiem-dai-duong")) {
+              const answers_array = [];
+
+              await getAppModel()?.game?.questionArr.forEach(async (question) => {
+                const ans_obj = question?.data?.ans;
+                const q_id = question?.questionId; 
+                const q_point = question?.questionPoint;
+                const sorted_ans = ans_obj.slice().sort((a, b) => a.orderTrue - b.orderTrue);
+
+                for (let i = 0; i < sorted_ans.length; i++) {
+                  answers_array.push({
+                    "ans": sorted_ans[i]?.content || "",
+                    "point": q_point || 10,
+                    "questId": q_id || 0
+                  });
+                } 
               })
 
               b_output(answers_array);
@@ -378,7 +390,7 @@
 
               b_q_output(answers_array);
               return;
-            }
+            } 
 
             const results = await Promise.all(
               getAppModel()?.game?.questionArr.map(async (question) => {
