@@ -10,7 +10,7 @@ if you want to add new features or fix some issues in the cheat, you will have t
 4. done, now you can use them in game
 
 # how to use
-1. go the page where you usually see 4 buttons to join the game (the page includes your name, and might be `/tu-luyen` on the url bar)
+1. go the page where you usually see buttons to join the game (the page includes your name, and might be `/tu-luyen` on the url bar)
 2. presses `Ctrl + Shift + I` or `F12` to open devtool
 3. after devtool opens, click on `Console` button on the top of the devtool to open the `Console` tab
 4. **you can join the game now!**
