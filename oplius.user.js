@@ -5,6 +5,7 @@
 // @author       kaedesuu
 // @match        https://ioe.vn/lam-bai/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=ioe.vn
+// @license	 GPL-v3
 // @grant        none
 // ==/UserScript==
 

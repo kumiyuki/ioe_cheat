@@ -178,6 +178,7 @@ window.__require("HotUpdate").default.prototype.logTime("show lobby done");
             });
 
             console.info("all commands:")
+            // console.table(final_outp);
             console.table(final_outp);
             console.info("To use a command, press '/' in the game screen and type the command.\nFor example, to use incorrectwarn, you can type `incorrectwarn on` after pressed '/' and turn off by prompting `incorrectwarn off`")
           }
