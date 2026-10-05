@@ -5,7 +5,7 @@ if you want to add new features or fix some issues in the cheat, you will have t
 
 # how to install
 1. install tampermonkey.
-2. click on https://github.com/kaedesuu/ioe_cheat/raw/refs/heads/main/oplius.user.js
+2. click on https://github.com/kumiyuki/ioe_cheat/raw/refs/heads/main/oplius.user.js
 3. you will see a new page popup with tampermonkey, then click on the `Install` button.
 4. done, now you can use them in game
 
