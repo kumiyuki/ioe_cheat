@@ -2,7 +2,7 @@
 // @name         Oplius
 // @version      2024-11-15
 // @description  The fastest way to beat IOE!
-// @author       kaedesuu
+// @author       kumiyuki
 // @match        https://ioe.vn/lam-bai/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=ioe.vn
 // @license	 GPL-v3
